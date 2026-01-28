@@ -592,7 +592,7 @@ export default function LandingPage() {
    
         <div className="nav-links">
           <Link to="/admin-login" className="nav-link">Login</Link>
-          <a href="#apply" className="nav-link apply-btn">Apply</a>
+          <Link to="/apply-franchise" className="nav-link apply-btn">Apply</Link>
         </div>
 
         <div className="menu-toggle" onClick={(e) => {
