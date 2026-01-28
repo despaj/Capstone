@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import logo from "../assets/iFranchise_logo.png";
 import welcome from "../assets/welcomepage.png";
 import AdminDashboard from "./AdminDashboard";
+import StaffDashboard from "./StaffDashboard";
+// Import other dashboards when you create them
+// import FranchisorDashboard from "./FranchisorDashboard";
+// import FranchiseeDashboard from "./FranchiseeDashboard";
+// import ManagerDashboard from "./ManagerDashboard";
 
 export default function AdminLogin() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null); // Track user role
 
   const [showForgot, setShowForgot] = useState(false);
   const [forgotStep, setForgotStep] = useState("email"); // 'email' or 'otp'
@@ -24,53 +32,66 @@ const [loggedIn, setLoggedIn] = useState(false);
     return () => clearTimeout(timer);
   }, []);
 
-
-  // login function 
-  
+  // Login function - FIXED VERSION
   const login = async () => {
-  let newErrors = {};
-  setAuthError("");
+    let newErrors = {};
+    setAuthError("");
 
-  if (!email && !password) {
-    newErrors.general = "Please fill out the fields";
-  } else {
-    if (!email) newErrors.email = "Email is required";
-    else if (!email.endsWith("@ifranchise.com"))
-      newErrors.email = "Email must be @ifranchise.com";
-
-    if (!password) newErrors.password = "Password is required";
-  }
-
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    return;
-  }
-
-  // Call backend API
-  try {
-    const response = await fetch("http://localhost:5000/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      // ✅ LOGIN SUCCESS
-      setLoggedIn(true);
-      // Optional: Store user data
-      localStorage.setItem("user", JSON.stringify(data.user));
+    if (!email && !password) {
+      newErrors.general = "Please fill out the fields";
     } else {
-      setAuthError(data.message || "Invalid credentials");
+      if (!email) newErrors.email = "Email is required";
+      else if (!email.endsWith("@ifranchise.com"))
+        newErrors.email = "Email must be @ifranchise.com";
+
+      if (!password) newErrors.password = "Password is required";
     }
-  } catch (error) {
-    console.error("Login error:", error);
-    setAuthError("Connection error. Please try again.");
-  }
-};
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Call backend API
+    try {
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // ===================================================
+        // ✅ SAVE USER DATA WITH ROLE TO LOCALSTORAGE
+        // ===================================================
+        const userData = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role, // THIS IS CRITICAL!
+          branch: data.user.branch,
+          avatar: '👤'
+        };
+
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        // Set logged in state and user role
+        setLoggedIn(true);
+        setUserRole(data.user.role);
+        // ===================================================
+        
+      } else {
+        setAuthError(data.message || "Invalid credentials");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setAuthError("Connection error. Please try again.");
+    }
+  };
 
   // Triggered when clicking "RESET" on email step
   const handleSendEmail = () => {
@@ -82,6 +103,13 @@ const [loggedIn, setLoggedIn] = useState(false);
     setForgotStep("otp");
     setErrors({});
   };
+
+    const handleLogout = () => {
+  if (window.confirm('Are you sure you want to logout?')) {
+    localStorage.removeItem('user');
+    window.location.reload(); // Just reload the page
+  }
+};
 
   // Triggered when clicking "VERIFY" on OTP step
   const handleVerifyOtp = () => {
@@ -95,9 +123,51 @@ const [loggedIn, setLoggedIn] = useState(false);
     setForgotEmail("");
     setOtp("");
   };
-if (loggedIn) {
-  return <AdminDashboard />;
-}
+
+  // ===================================================
+  // RENDER CORRECT DASHBOARD BASED ON USER ROLE
+  // ===================================================
+  if (loggedIn && userRole) {
+    switch (userRole) {
+      case 'Administrator':
+        return <AdminDashboard />;
+      
+      case 'Staff':
+        return <StaffDashboard />;
+      
+      case 'Franchisor':
+        // Temporary - use AdminDashboard until you create FranchisorDashboard
+        return <AdminDashboard />;
+        // return <FranchisorDashboard />;
+      
+      case 'Franchisee':
+        // Temporary - use StaffDashboard until you create FranchiseeDashboard
+        return <StaffDashboard />;
+        // return <FranchiseeDashboard />;
+      
+      case 'Manager':
+        // Temporary - use StaffDashboard until you create ManagerDashboard
+        return <StaffDashboard />;
+        // return <ManagerDashboard />;
+      
+      default:
+        // Unknown role - show error
+        return (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <h2>Error: Unknown user role</h2>
+            <p>Please contact administrator</p>
+            <button onClick={() => {
+              localStorage.removeItem('user');
+              setLoggedIn(false);
+              setUserRole(null);
+            }}>
+              Back to Login
+            </button>
+          </div>
+        );
+    }
+  }
+  // ===================================================
 
   if (showSplash) {
     return (
@@ -292,6 +362,15 @@ input {
   animation: popup 0.3s ease-out;
 }
 
+.error.general {
+  color: #d32f2f;
+  font-size: 13px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #ffebee;
+  border-radius: 8px;
+}
+
 @keyframes popup {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -309,7 +388,14 @@ input {
   transition: 0.3s;
 }
 
+.btn:hover {
+  background: #1B5E20;
+  transform: translateY(-2px);
+}
+
 .btn.yellow { background: #cabd2c; margin-top: 10px; }
+
+.btn.yellow:hover { background: #b3a728; }
 
 .forgot-link {
   background: none;
@@ -319,6 +405,10 @@ input {
   cursor: pointer;
   display: block;
   margin: 0 auto 20px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
 }
 
 /* MODAL */
@@ -361,6 +451,10 @@ input {
   font-size: 13px;
 }
 
+.close-btn:hover {
+  color: #666;
+}
+
 .link-small {
     background: none;
     border: none;
@@ -369,5 +463,9 @@ input {
     font-size: 12px;
     margin-top: 10px;
     cursor: pointer;
+}
+
+.link-small:hover {
+  color: #1B5E20;
 }
 `;

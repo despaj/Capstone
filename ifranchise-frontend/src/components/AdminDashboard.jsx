@@ -10,20 +10,35 @@ export default function AdminDashboard() {
   const [showViewApplicationModal, setShowViewApplicationModal] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
 
-  // Mock user data
-  const user = {
-    name: 'John Admin',
-    role: 'Administrator',
-    email: 'admin@ifranchise.com',
-    avatar: '👤'
+  // GET USER DATA FROM LOCALSTORAGE
+  const getUserFromStorage = () => {
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      return JSON.parse(userString);
+    }
+    // If no user found, redirect to login
+    navigate('/login');
+    return null;
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('user');
-      navigate('/admin-login');
+  const [user, setUser] = useState(getUserFromStorage);
+
+  // Check if user is logged in on component mount
+  useEffect(() => {
+    const currentUser = getUserFromStorage();
+    if (!currentUser) {
+      navigate('/login');
+    } else {
+      setUser(currentUser);
     }
-  };
+  }, []);
+
+ const handleLogout = () => {
+  if (window.confirm('Are you sure you want to logout?')) {
+    localStorage.removeItem('user');
+    window.location.reload(); // Just reload the page
+  }
+};
 
   // Mock data for applications with complete form data
   const [applications, setApplications] = useState([

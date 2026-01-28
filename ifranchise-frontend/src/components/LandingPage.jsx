@@ -590,8 +590,6 @@ export default function LandingPage() {
             <img src={logo} alt="iFranchise Logo" />
           </div>
    
-
-        
         <div className="nav-links">
           <Link to="/admin-login" className="nav-link">Login</Link>
           <a href="#apply" className="nav-link apply-btn">Apply</a>
