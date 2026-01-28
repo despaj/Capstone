@@ -52,9 +52,8 @@ export default function AdminLogin() {
       return;
     }
 
-    // Call backend API
     try {
-      const response = await fetch("http://localhost:5000/login", {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -65,25 +64,12 @@ export default function AdminLogin() {
       const data = await response.json();
 
       if (data.success) {
-        // ===================================================
-        // ✅ SAVE USER DATA WITH ROLE TO LOCALSTORAGE
-        // ===================================================
-        const userData = {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role, // THIS IS CRITICAL!
-          branch: data.user.branch,
-          avatar: '👤'
-        };
+        // Store both user data AND token
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token); // Store JWT token
 
-        localStorage.setItem("user", JSON.stringify(userData));
-        
-        // Set logged in state and user role
         setLoggedIn(true);
         setUserRole(data.user.role);
-        // ===================================================
-        
       } else {
         setAuthError(data.message || "Invalid credentials");
       }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { api } from '../utils/api';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -1467,9 +1468,10 @@ function UsersContent() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/users");
-      const data = await response.json();
-      setUsers(data);
+      const data = await api.get('/api/users');
+      if (data && data.success) {
+        setUsers(data.users);
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       alert("Failed to load users");
@@ -1478,25 +1480,17 @@ function UsersContent() {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
-    
+
     try {
-      const response = await fetch("http://localhost:5000/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const data = await api.post('/api/users', formData);
 
-      const data = await response.json();
-
-      if (data.success) {
-        await fetchUsers(); // Refresh the list
+      if (data && data.success) {
+        await fetchUsers();
         setShowAddModal(false);
         resetForm();
         alert('User added successfully!');
       } else {
-        alert(data.error || 'Failed to add user');
+        alert(data?.message || 'Failed to add user');
       }
     } catch (error) {
       console.error("Error adding user:", error);
@@ -1506,26 +1500,18 @@ function UsersContent() {
 
   const handleEditUser = async (e) => {
     e.preventDefault();
-    
+
     try {
-      const response = await fetch(`http://localhost:5000/users/${editingUser.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const data = await api.put(`/api/users/${editingUser.id}`, formData);
 
-      const data = await response.json();
-
-      if (data.success) {
-        await fetchUsers(); // Refresh the list
+      if (data && data.success) {
+        await fetchUsers();
         setShowEditModal(false);
         setEditingUser(null);
         resetForm();
         alert('User updated successfully!');
       } else {
-        alert(data.error || 'Failed to update user');
+        alert(data?.message || 'Failed to update user');
       }
     } catch (error) {
       console.error("Error updating user:", error);
@@ -1536,17 +1522,13 @@ function UsersContent() {
   const handleDeleteUser = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const response = await fetch(`http://localhost:5000/users/${id}`, {
-          method: "DELETE",
-        });
+        const data = await api.delete(`/api/users/${id}`);
 
-        const data = await response.json();
-
-        if (data.success) {
-          await fetchUsers(); // Refresh the list
+        if (data && data.success) {
+          await fetchUsers();
           alert('User deleted successfully!');
         } else {
-          alert(data.error || 'Failed to delete user');
+          alert(data?.message || 'Failed to delete user');
         }
       } catch (error) {
         console.error("Error deleting user:", error);
@@ -1898,24 +1880,23 @@ function ProfileContent({ user }) {
     setSentOtp('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Check if password change is requested
+
     const isPasswordChange = formData.currentPassword || formData.newPassword || formData.confirmPassword;
-    
+
     if (isPasswordChange) {
-      // Validate password fields
+      // Validation
       if (!formData.currentPassword) {
         alert('Please enter your current password');
         return;
       }
-      
+
       if (!formData.newPassword) {
         alert('Please enter a new password');
         return;
       }
-      
+
       if (formData.newPassword !== formData.confirmPassword) {
         alert('New passwords do not match!');
         return;
@@ -1926,15 +1907,23 @@ function ProfileContent({ user }) {
         return;
       }
 
-      // Check if personal email is provided for OTP
-      if (!formData.personalEmail && !formData.email) {
-        alert('Please provide an email address to receive OTP');
-        return;
-      }
+      try {
+        // Call the API to change password
+        const data = await api.post('/api/auth/change-password', {
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        });
 
-      // Send OTP and show verification modal
-      sendOtp();
-      setShowOtpModal(true);
+        if (data && data.success) {
+          alert('Password changed successfully! Please login again.');
+          logout(); // From api.js utility
+        } else {
+          alert(data?.message || 'Failed to change password');
+        }
+      } catch (error) {
+        console.error('Change password error:', error);
+        alert('Failed to change password');
+      }
     } else {
       // Just update profile without password change
       alert('Profile updated successfully!');
